@@ -218,14 +218,14 @@ body {
     transform: scale(0.98);
 }
 
-/* Queue List */
-.queue-list {
+/* Queue & History Lists */
+.queue-list, .history-list {
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 
-.queue-item {
+.queue-item, .history-item {
     background: var(--card-bg);
     padding: 16px;
     border-radius: 16px;
@@ -233,6 +233,10 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.history-item {
+    border-left: 4px solid var(--accent-green);
 }
 
 .receiver {
@@ -276,8 +280,27 @@ body {
     margin-top: 4px;
 }
 
-/* Bottom Nav */
-.bottom-nav {
+/* Identity Selector */
+.account-dropdown {
+    width: 100%;
+    padding: 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    color: white;
+    font-size: 0.95rem;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+}
+
+.account-dropdown:focus {
+    border-color: var(--accent-blue);
+}
     position: fixed;
     bottom: 0;
     left: 0;

@@ -28,6 +28,15 @@
     <main id="app-content">
         <!-- View 1: My Digital Cash (Local Wallet) -->
         <section id="view-wallet" class="view active">
+            <div class="identity-selector" style="margin-bottom: 20px;">
+                <label for="account-select" class="label">Switch Local Identity</label>
+                <select id="account-select" class="account-dropdown" onchange="switchAccount(this.value)">
+                    <option value="alice@upimesh">Alice (alice@upimesh)</option>
+                    <option value="bob@upimesh">Bob (bob@upimesh)</option>
+                    <option value="charlie@upimesh">Charlie (charlie@upimesh)</option>
+                </select>
+            </div>
+
             <div class="card wallet-card">
                 <p class="label">Local Balance (Synced)</p>
                 <h2 class="balance">₹ 0.00</h2>
@@ -81,21 +90,19 @@
             </div>
 
             <div class="queue-list" id="queue-list">
-                <!-- Example Pending Item -->
-                <div class="queue-item">
-                    <div class="item-info">
-                        <p class="receiver">To: bob@upi</p>
-                        <p class="amount">₹ 250.00</p>
-                    </div>
-                    <div class="item-status">
-                        <span class="badge">Pending Sync</span>
-                        <p class="time">Just now</p>
-                    </div>
-                </div>
-                
-                <div class="empty-state" style="display: none;">
-                    <p>No pending payments. You're all caught up!</p>
-                </div>
+                <!-- Items injected by app.js -->
+            </div>
+        </section>
+
+        <!-- View 4: Transaction History (Settled) -->
+        <section id="view-history" class="view">
+            <div class="view-header">
+                <h2>History</h2>
+                <p>Successfully settled payments.</p>
+            </div>
+
+            <div class="history-list" id="history-list">
+                <!-- Transactions injected by app.js -->
             </div>
         </section>
     </main>
@@ -113,6 +120,10 @@
         <button class="nav-item" onclick="switchView('view-queue', this)">
             <span class="nav-icon">⌛</span>
             <span class="nav-label">Queue</span>
+        </button>
+        <button class="nav-item" onclick="switchView('view-history', this)">
+            <span class="nav-icon">📜</span>
+            <span class="nav-label">History</span>
         </button>
     </nav>
 

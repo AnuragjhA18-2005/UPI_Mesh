@@ -5,76 +5,42 @@
 
 // --- Configuration & Constants ---
 const CONFIG = {
-    STORAGE_KEY: 'upimesh_outbound_queue',
+    STORAGE_KEY_PREFIX: 'upimesh_queue_',
+    HISTORY_KEY_PREFIX: 'upimesh_history_',
+    BALANCE_KEY_PREFIX: 'upimesh_balance_',
     AUTH_KEY: 'upimesh_auth_token',
-    BALANCE_KEY: 'upimesh_last_balance',
-    CLEANUP_DELAY: 5000,
-    SYNC_RETRY_DELAY: 10000
+    CLEANUP_DELAY: 5000
 };
 
 const STATE = {
-    isSyncing: false
+    isSyncing: false,
+    activeAccount: localStorage.getItem('upimesh_active_account') || 'alice@upimesh'
 };
 
-// --- UI Helpers ---
-/**
- * Shows a premium in-app notification toast
- * @param {string} message - Message to display
- * @param {string} type - 'success' or 'error'
- */
-function showNotification(message, type = 'success') {
-    const toast = document.getElementById('notification-toast');
-    if (!toast) return;
-
-    toast.innerText = message;
-    toast.className = `toast show ${type}`;
-
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 4000);
-}
-
-// --- View Navigation ---
-/**
- * Switches between the different app views (Wallet, Pay, Queue)
- * @param {string} viewId - ID of the view section to show
- * @param {HTMLElement} navElement - Optional nav button that was clicked
- */
-function switchView(viewId, navElement) {
-    document.querySelectorAll('.view').forEach(view => view.classList.remove('active'));
-    document.getElementById(viewId).classList.add('active');
-
-    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-    
-    if (navElement) {
-        navElement.classList.add('active');
-    } else {
-        const indexMap = { 'view-wallet': 0, 'view-pay': 1, 'view-queue': 2 };
-        const index = indexMap[viewId];
-        if (index !== undefined) {
-            document.querySelectorAll('.nav-item')[index].classList.add('active');
-        }
-    }
-}
-
 // --- Local Storage (State Persistence) ---
+function getAccountKey(type) {
+    return type + STATE.activeAccount;
+}
+
 /** @returns {Array} List of packets currently in the local queue */
 function getQueue() {
     try {
-        const data = localStorage.getItem(CONFIG.STORAGE_KEY);
+        const data = localStorage.getItem(getAccountKey(CONFIG.STORAGE_KEY_PREFIX));
         return data ? JSON.parse(data) : [];
     } catch (e) {
-        console.error("Storage corruption detected, resetting queue.");
-        localStorage.removeItem(CONFIG.STORAGE_KEY);
         return [];
     }
+}
+
+function saveQueue(queue) {
+    localStorage.setItem(getAccountKey(CONFIG.STORAGE_KEY_PREFIX), JSON.stringify(queue));
 }
 
 /** @param {Object} packet - The MeshPacket to add to local storage */
 function addToQueue(packet) {
     const queue = getQueue();
     queue.unshift(packet);
-    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(queue));
+    saveQueue(queue);
     renderQueue();
     if (navigator.onLine) flushQueue();
 }
@@ -86,7 +52,7 @@ function updatePacketStatus(packetId, status, txId = null) {
     if (packet) {
         packet.status = status;
         if (txId) packet.txId = txId;
-        localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(queue));
+        saveQueue(queue);
         renderQueue();
     }
 }
@@ -94,31 +60,90 @@ function updatePacketStatus(packetId, status, txId = null) {
 /** Removes a packet from the queue (usually after settlement) */
 function removeFromQueue(packetId) {
     const queue = getQueue().filter(p => p.packetId !== packetId);
-    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(queue));
+    saveQueue(queue);
     renderQueue();
 }
 
+/** Cleans up all settled packets from the queue (e.g., on startup or after sync) */
+function cleanupQueue() {
+    const queue = getQueue();
+    const active = queue.filter(p => p.status !== 'SETTLED');
+    if (active.length !== queue.length) {
+        saveQueue(active);
+        renderQueue();
+    }
+}
+
+/** @returns {Array} List of settled transactions from local cache */
+function getLocalHistory() {
+    try {
+        const data = localStorage.getItem(getAccountKey(CONFIG.HISTORY_KEY_PREFIX));
+        return data ? JSON.parse(data) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+/** Adds a transaction to local history cache */
+function addToLocalHistory(tx) {
+    const history = getLocalHistory();
+    if (!history.find(h => (h.id && h.id === tx.id) || (h.packetId && h.packetId === tx.packetId))) {
+        history.unshift(tx);
+        localStorage.setItem(getAccountKey(CONFIG.HISTORY_KEY_PREFIX), JSON.stringify(history.slice(0, 50)));
+    }
+}
+
+// --- Account Management ---
+async function switchAccount(accountId) {
+    console.log(`[Account] Switching to: ${accountId}`);
+    STATE.activeAccount = accountId;
+    localStorage.setItem('upimesh_active_account', accountId);
+    
+    // Reset UI for the new account context
+    initBalance();
+    cleanupQueue();
+    renderQueue();
+    
+    // Switch to Wallet view automatically
+    switchView('view-wallet');
+    
+    // Trigger fresh data fetch
+    if (navigator.onLine) {
+        fetchBalance();
+        flushQueue();
+    }
+}
+
+async function fetchIdentities() {
+    try {
+        const res = await fetch('/api/accounts');
+        if (res.ok) {
+            const accounts = await res.json();
+            const select = document.getElementById('account-select');
+            if (select) {
+                select.innerHTML = accounts.map(acc => 
+                    `<option value="${acc.id}" ${acc.id === STATE.activeAccount ? 'selected' : ''}>${acc.id}</option>`
+                ).join('');
+            }
+        }
+    } catch (e) {
+        console.warn("[Account] Failed to fetch identity list from server.");
+    }
+}
+
 // --- UI Rendering Engine ---
-/** Renders the current queue to the DOM */
 function renderQueue() {
     const queueList = document.getElementById('queue-list');
     if (!queueList) return;
-    
     const queue = getQueue();
 
     if (queue.length === 0) {
-        queueList.innerHTML = `
-            <div class="empty-state">
-                <p>No pending payments. You're all caught up!</p>
-            </div>`;
+        queueList.innerHTML = `<div class="empty-state"><p>No pending payments for ${STATE.activeAccount}.</p></div>`;
         return;
     }
 
     queueList.innerHTML = queue.map(packet => {
         const isSettled = packet.status === 'SETTLED';
-        const statusClass = isSettled ? 'badge-success' : 'badge-pending';
-        const statusLabel = isSettled ? 'Settled' : 'Pending Sync';
-        
         return `
             <div class="queue-item ${isSettled ? 'settled' : ''}">
                 <div class="item-info">
@@ -129,29 +154,76 @@ function renderQueue() {
                     </small>
                 </div>
                 <div class="item-status">
-                    <span class="badge ${statusClass}">${statusLabel}</span>
+                    <span class="badge ${isSettled ? 'badge-success' : 'badge-pending'}">${isSettled ? 'Settled' : 'Pending'}</span>
                     <p class="time">${new Date(packet.timestamp).toLocaleTimeString()}</p>
                 </div>
             </div>`;
     }).join('');
 }
 
-// --- Network & Sync (Bridge Sync) ---
-/** Attempts to push all pending packets to the bridge server */
+async function fetchHistory() {
+    const historyList = document.getElementById('history-list');
+    if (!historyList) return;
+
+    let backendTxs = [];
+    try {
+        const res = await fetch(`/api/accounts/${STATE.activeAccount}/transactions`);
+        if (res.ok) {
+            backendTxs = await res.json();
+            backendTxs.forEach(tx => addToLocalHistory(tx));
+        }
+    } catch (e) {
+        console.error("Failed to fetch history from backend:", e);
+    }
+
+    const localHistory = getLocalHistory();
+    const localQueue = getQueue();
+    renderHistory(backendTxs.length > 0 ? backendTxs : localHistory, localQueue);
+}
+
+function renderHistory(settledTxs, unsettledTxs) {
+    const historyList = document.getElementById('history-list');
+    if (!historyList) return;
+
+    const allTxs = [
+        ...unsettledTxs.map(tx => ({ ...tx, isPending: true })),
+        ...settledTxs.map(tx => ({ ...tx, isPending: false }))
+    ].sort((a, b) => new Date(b.timestamp || b.signedAt) - new Date(a.timestamp || a.signedAt));
+
+    if (allTxs.length === 0) {
+        historyList.innerHTML = `<div class="empty-state"><p>No transaction history for ${STATE.activeAccount}.</p></div>`;
+        return;
+    }
+
+    historyList.innerHTML = allTxs.map(tx => {
+        const isPending = tx.isPending;
+        return `
+            <div class="history-item ${isPending ? 'pending' : ''}">
+                <div class="item-info">
+                    <p class="receiver">To: ${isPending ? tx.receiver : tx.receiverID}</p>
+                    <p class="amount">₹ ${parseFloat(tx.amount).toFixed(2)}</p>
+                    <small style="color: var(--text-secondary); font-size: 0.6rem; display: block; margin-top: 4px;">
+                        ${isPending ? 'Pending' : 'TX ID: ' + tx.id} | ${new Date(tx.timestamp || tx.signedAt).toLocaleDateString()}
+                    </small>
+                </div>
+                <div class="item-status">
+                    <span class="badge ${isPending ? 'badge-pending' : 'badge-success'}">${isPending ? 'Pending' : 'Settled'}</span>
+                    <p class="time">${new Date(tx.timestamp || tx.signedAt).toLocaleTimeString()}</p>
+                </div>
+            </div>`;
+    }).join('');
+}
+
+// --- Network & Sync ---
 async function flushQueue() {
     if (STATE.isSyncing || !navigator.onLine) return;
-    
+    cleanupQueue();
     const queue = getQueue().filter(p => p.status !== 'SETTLED');
     if (queue.length === 0) return;
-
     STATE.isSyncing = true;
-    console.log(`[Bridge Sync] Starting sync for ${queue.length} packets...`);
 
-    // --- Automatic Authentication for Demo ---
     let token = localStorage.getItem(CONFIG.AUTH_KEY);
-    
-    if (!token || token === 'undefined' || token === 'null') {
-        console.log("[Bridge Sync] No valid token found. Attempting automatic login...");
+    if (!token || token === 'undefined') {
         try {
             const authRes = await fetch('/api/auth/login', {
                 method: 'POST',
@@ -159,219 +231,137 @@ async function flushQueue() {
                 body: JSON.stringify({ username: 'bridge-node-1', password: 'secret123' })
             });
             if (authRes.ok) {
-                const authData = await authRes.json();
-                token = authData.token;
-                if (token) {
-                    localStorage.setItem(CONFIG.AUTH_KEY, token);
-                    console.log("[Bridge Sync] Login successful. Token acquired.");
-                } else {
-                    console.error("[Bridge Sync] Login succeeded but no token returned.");
-                    STATE.isSyncing = false;
-                    return;
-                }
-            } else {
-                console.error("[Bridge Sync] Auth failed with status:", authRes.status);
-                STATE.isSyncing = false;
-                return;
+                const data = await authRes.json();
+                token = data.token;
+                localStorage.setItem(CONFIG.AUTH_KEY, token);
             }
-        } catch (e) {
-            console.error("[Bridge Sync] Auth error:", e);
-            STATE.isSyncing = false;
-            return;
-        }
+        } catch (e) { STATE.isSyncing = false; return; }
     }
 
     for (const packet of queue) {
         try {
-            console.log(`[Bridge Sync] Attempting to ingest packet: ${packet.packetId}`);
             const response = await fetch('/api/bridge/ingest', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json', 
-                    'Authorization': `Bearer ${token}` 
-                },
-                body: JSON.stringify({ 
-                    packetId: packet.packetId, 
-                    cipherText: packet.cipherText 
-                })
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ packetId: packet.packetId, cipherText: packet.cipherText })
             });
 
             if (response.ok) {
                 const result = await response.text();
-                console.log(`[Bridge Sync] Success: ${result}`);
-                const txId = result.split('ID ')[1] || 'OK';
-                updatePacketStatus(packet.packetId, 'SETTLED', txId);
-                
-                // Refresh balance after successful settlement
-                fetchBalance();
-                
-                setTimeout(() => removeFromQueue(packet.packetId), CONFIG.CLEANUP_DELAY);
-            } else if (response.status === 400) {
-                // TERMINAL ERROR: Business logic failure (e.g., Insufficient Funds)
-                console.error(`[Bridge Sync] Terminal failure for ${packet.packetId}: 400 Bad Request`);
-                showNotification(`Payment Failed: The server rejected a payment for ₹${packet.amount}. (Likely Insufficient Balance).`, 'error');
-                removeFromQueue(packet.packetId);
-            } else if (response.status === 403 || response.status === 401) {
-                console.warn(`[Bridge Sync] Token rejected (403/401) for packet ${packet.packetId}. Clearing token.`);
-                localStorage.removeItem(CONFIG.AUTH_KEY);
-                break; 
-            } else {
-                console.warn(`[Bridge Sync] Server error (${response.status}) for packet ${packet.packetId}`);
-            }
-        } catch (err) {
-            console.error(`[Bridge Sync] Network error for ${packet.packetId}:`, err);
-            break; 
-        }
-    }
+                const txIdMatch = result.match(/Transaction ID (\d+)/);
+                const txId = txIdMatch ? txIdMatch[1] : 'OK';
 
+                addToLocalHistory({
+                    id: txId,
+                    senderID: STATE.activeAccount,
+                    receiverID: packet.receiver,
+                    amount: packet.amount,
+                    timestamp: new Date().toISOString(),
+                    packetId: packet.packetId
+                });
+
+                removeFromQueue(packet.packetId);
+                fetchBalance();
+                if (document.getElementById('view-history').classList.contains('active')) fetchHistory();
+                showNotification(`Payment of ₹${packet.amount} for ${packet.receiver} settled!`, 'success');
+            } else if (response.status === 400) {
+                showNotification(`Payment Failed: ${packet.receiver} rejected (Insufficient Funds).`, 'error');
+                removeFromQueue(packet.packetId);
+            }
+        } catch (err) { break; }
+    }
     STATE.isSyncing = false;
 }
 
-// --- Crypto & Packet Generation ---
-/** Generates a payment packet (Uses backend if online, simulates if offline) */
+async function fetchBalance() {
+    if (!navigator.onLine) return;
+    try {
+        const res = await fetch(`/api/accounts/${STATE.activeAccount}/balance`);
+        if (res.ok) {
+            const data = await res.json();
+            const formatted = parseFloat(data.balance).toFixed(2);
+            document.querySelector('.balance').innerText = `₹ ${formatted}`;
+            localStorage.setItem(getAccountKey(CONFIG.BALANCE_KEY_PREFIX), formatted);
+        }
+    } catch (e) {}
+}
+
+function initBalance() {
+    const last = localStorage.getItem(getAccountKey(CONFIG.BALANCE_KEY_PREFIX)) || '0.00';
+    document.querySelector('.balance').innerText = `₹ ${last}`;
+}
+
 async function generateOfflinePacket(receiver, amount) {
     if (navigator.onLine) {
         try {
-            const response = await fetch('/api/demo/generate-packet');
+            // Updated to pass senderID if backend supports it in demo controller
+            const response = await fetch(`/api/demo/generate-packet?sender=${STATE.activeAccount}&receiver=${receiver}&amount=${amount}`);
             if (response.ok) {
                 const packet = await response.json();
-                return { 
-                    ...packet, 
-                    receiver, 
-                    amount, 
-                    timestamp: Date.now(), 
-                    type: 'SECURE' 
-                };
+                return { ...packet, receiver, amount, timestamp: Date.now() };
             }
-        } catch (e) {
-            console.warn("Backend encryption unavailable, switching to local mode.");
-        }
+        } catch (e) {}
     }
-
-    // Local Simulation Mode
     return {
         packetId: 'offline-' + Math.random().toString(36).substr(2, 9),
-        cipherText: btoa(JSON.stringify({ receiver, amount, nonce: Math.random() })),
-        receiver, 
-        amount, 
-        timestamp: Date.now(), 
-        type: 'SIMULATED'
+        cipherText: btoa(JSON.stringify({ receiver, amount, sender: STATE.activeAccount, timestamp: Date.now() })),
+        receiver, amount, timestamp: Date.now()
     };
 }
 
-// --- Network & Sync (Bridge Sync) ---
-/** 
- * Fetches the actual balance from the server for the demo account
- */
-async function fetchBalance() {
-    const isOnline = await checkConnectivity();
-    if (!isOnline) return;
-    
-    try {
-        const res = await fetch('/api/accounts/alice_phone/balance');
-        if (res.ok) {
-            const data = await res.json();
-            const balanceEl = document.querySelector('.balance');
-            if (balanceEl) {
-                const formattedBalance = parseFloat(data.balance).toFixed(2);
-                balanceEl.innerText = `₹ ${formattedBalance}`;
-                localStorage.setItem(CONFIG.BALANCE_KEY, formattedBalance);
-                console.log(`[Wallet] Balance synced: ₹${formattedBalance}`);
-            }
-        }
-    } catch (e) {
-        console.warn("[Wallet] Failed to sync balance.");
+// --- Lifecycle ---
+function switchView(viewId, navElement) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    if (navElement) navElement.classList.add('active');
+    else {
+        const map = { 'view-wallet': 0, 'view-pay': 1, 'view-queue': 2, 'view-history': 3 };
+        const items = document.querySelectorAll('.nav-item');
+        if (items[map[viewId]]) items[map[viewId]].classList.add('active');
     }
+    if (viewId === 'view-history') fetchHistory();
 }
 
-/** 
- * Initializes the wallet UI with the last known balance from storage
- */
-function initBalance() {
-    const lastBalance = localStorage.getItem(CONFIG.BALANCE_KEY) || '0.00';
-    const balanceEl = document.querySelector('.balance');
-    if (balanceEl) {
-        balanceEl.innerText = `₹ ${lastBalance}`;
-    }
-}
-
-/** 
- * Checks if the backend is actually reachable 
- * @returns {Promise<boolean>}
- */
 async function checkConnectivity() {
     if (!navigator.onLine) return false;
     try {
-        const res = await fetch('/api/health?t=' + Date.now(), { method: 'GET', cache: 'no-store' });
+        const res = await fetch('/api/health?t=' + Date.now());
         return res.ok;
-    } catch (e) {
-        return false;
-    }
+    } catch (e) { return false; }
 }
 
 const updateNetworkStatus = async () => {
+    const isOnline = await checkConnectivity();
     const pulse = document.querySelector('.pulse');
     const badge = document.querySelector('.status-badge');
-    
-    // Perform a real check if navigator thinks we are online
-    const isActuallyOnline = await checkConnectivity();
-
-    if (pulse) pulse.style.backgroundColor = isActuallyOnline ? 'var(--accent-green)' : 'var(--accent-red)';
-    if (badge) {
-        badge.innerHTML = isActuallyOnline 
-            ? '<span class="pulse" style="background-color: var(--accent-green)"></span> Online (Bridge Active)'
-            : '<span class="pulse" style="background-color: var(--accent-red)"></span> Offline Mode Active';
-    }
-
-    if (isActuallyOnline) {
-        fetchBalance();
-        flushQueue();
-    }
+    if (pulse) pulse.style.backgroundColor = isOnline ? 'var(--accent-green)' : 'var(--accent-red)';
+    if (badge) badge.innerHTML = isOnline ? '<span class="pulse" style="background-color: var(--accent-green)"></span> Online (Bridge Active)' : '<span class="pulse" style="background-color: var(--accent-red)"></span> Offline Mode Active';
+    if (isOnline) { fetchBalance(); flushQueue(); fetchIdentities(); }
 };
 
-window.addEventListener('online', updateNetworkStatus);
-window.addEventListener('offline', updateNetworkStatus);
-
-// Regular polling to catch DevTools state changes or network drops
-setInterval(updateNetworkStatus, 5000);
-
 document.addEventListener('DOMContentLoaded', () => {
-    // Initial UI state setup
     initBalance();
+    cleanupQueue();
     renderQueue();
-
-    // Initial status check
     updateNetworkStatus();
-    
-    // Re-verify after 1.5 seconds
-    setTimeout(updateNetworkStatus, 1500);
+    setInterval(updateNetworkStatus, 5000);
 
-    // Setup Payment Form Listener
     const form = document.getElementById('payment-form');
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const vpa = document.getElementById('vpa').value;
             const amount = document.getElementById('amount').value;
             const btn = e.target.querySelector('button');
-
-            btn.disabled = true;
-            btn.innerHTML = '🔒 Encrypting...';
-
+            btn.disabled = true; btn.innerHTML = '🔒 Encrypting...';
             try {
                 const packet = await generateOfflinePacket(vpa, amount);
                 addToQueue(packet);
                 e.target.reset();
                 switchView('view-queue');
-                showNotification(`Payment for ₹${amount} has been safely encrypted and queued.`, 'success');
-            } catch (err) {
-                console.error("Payment generation failed:", err);
-                showNotification("Critical error during encryption. Payment aborted.", "error");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<span class="icon">🔒</span> Encrypt & Queue Payment';
-            }
+                showNotification(`Payment of ₹${amount} queued for ${vpa}.`, 'success');
+            } finally { btn.disabled = false; btn.innerHTML = '<span class="icon">🔒</span> Encrypt & Queue Payment'; }
         });
     }
 });
