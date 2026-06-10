@@ -231,7 +231,27 @@ async function generateOfflinePacket(receiver, amount) {
     };
 }
 
-// --- Event Handlers & Initialization ---
+// --- Network & Sync (Bridge Sync) ---
+/** 
+ * Fetches the actual balance from the server for the demo account
+ */
+async function fetchBalance() {
+    if (!navigator.onLine) return;
+    try {
+        const res = await fetch('/api/accounts/alice_phone/balance');
+        if (res.ok) {
+            const data = await res.json();
+            const balanceEl = document.querySelector('.balance');
+            if (balanceEl) {
+                balanceEl.innerText = `₹ ${parseFloat(data.balance).toFixed(2)}`;
+                console.log(`[Wallet] Balance synced: ₹${data.balance}`);
+            }
+        }
+    } catch (e) {
+        console.warn("[Wallet] Failed to sync balance.");
+    }
+}
+
 /** 
  * Checks if the backend is actually reachable 
  * @returns {Promise<boolean>}
@@ -261,7 +281,10 @@ const updateNetworkStatus = async () => {
             : '<span class="pulse" style="background-color: var(--accent-red)"></span> Offline Mode Active';
     }
 
-    if (isActuallyOnline) flushQueue();
+    if (isActuallyOnline) {
+        fetchBalance();
+        flushQueue();
+    }
 };
 
 window.addEventListener('online', updateNetworkStatus);
