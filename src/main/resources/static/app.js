@@ -128,7 +128,33 @@ async function flushQueue() {
     STATE.isSyncing = true;
     console.log(`[Bridge Sync] Starting sync for ${queue.length} packets...`);
 
-    const token = localStorage.getItem(CONFIG.AUTH_KEY) || 'DEV_TOKEN';
+    // --- Automatic Authentication for Demo ---
+    let token = localStorage.getItem(CONFIG.AUTH_KEY);
+    
+    if (!token) {
+        console.log("[Bridge Sync] No token found. Attempting automatic login...");
+        try {
+            const authRes = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: 'bridge-node-1', password: 'secret123' })
+            });
+            if (authRes.ok) {
+                const authData = await authRes.json();
+                token = authData.token;
+                localStorage.setItem(CONFIG.AUTH_KEY, token);
+                console.log("[Bridge Sync] Login successful.");
+            } else {
+                console.error("[Bridge Sync] Auth failed. Check credentials.");
+                STATE.isSyncing = false;
+                return;
+            }
+        } catch (e) {
+            console.error("[Bridge Sync] Auth error:", e);
+            STATE.isSyncing = false;
+            return;
+        }
+    }
 
     for (const packet of queue) {
         try {
