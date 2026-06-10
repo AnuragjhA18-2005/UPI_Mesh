@@ -47,8 +47,13 @@ public class SettlementService {
         }
         Account sender = accountRepo.findById(senderID)
                 .orElseThrow(() -> new IllegalArgumentException("Sender Account Not Found"));
+        
+        // Auto-Discovery: If receiver doesn't exist, create it with ₹0
         Account receiver = accountRepo.findById(receiverID)
-                .orElseThrow(() -> new IllegalArgumentException("Receiver Account Not Found"));
+                .orElseGet(() -> {
+                    log.info("Auto-discovery: Creating new account for {}", receiverID);
+                    return accountRepo.save(new Account(receiverID, BigDecimal.ZERO));
+                });
 
         if (sender.getBalance() == null || receiver.getBalance() == null) {
             throw new IllegalStateException("Account balance not initialized");

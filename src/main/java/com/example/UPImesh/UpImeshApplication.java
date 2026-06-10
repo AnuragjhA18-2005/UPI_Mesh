@@ -22,11 +22,18 @@ public class UpImeshApplication {
 	@Bean
 	public CommandLineRunner testRunner(AccountRepo accountRepo,SettlementService settlementService){
 		return args ->{
-			// Force reset Alice and Bob for the demo
-			accountRepo.save(new Account("alice_phone",new BigDecimal("5000.0")));
-			accountRepo.save(new Account("bob_phone",new BigDecimal("5000.0")));
-			System.out.println("Demo Environment Reset: Alice and Bob set to ₹5,000.");
+			// Seed test accounts for the prototype
+			saveOrUpdateAccount(accountRepo, "alice@upimesh", new BigDecimal("5000.0"));
+			saveOrUpdateAccount(accountRepo, "bob@upimesh", new BigDecimal("5000.0"));
+			saveOrUpdateAccount(accountRepo, "charlie@upimesh", new BigDecimal("5000.0"));
+			System.out.println("Prototype Environment Seeded: Alice, Bob, and Charlie set to ₹5,000.");
 		};
+	}
+
+	private void saveOrUpdateAccount(AccountRepo accountRepo, String accountId, BigDecimal balance) {
+		Account account = accountRepo.findById(accountId).orElse(new Account(accountId, balance));
+		account.setBalance(balance);
+		accountRepo.save(account);
 	}
 
 }
