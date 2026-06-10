@@ -1,4 +1,4 @@
-package com.example.UPImesh.Crypto;
+package com.example.UPImesh.crypto;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -29,3 +29,4 @@ public class ServerKeyHolder {
         return keyPair.getPrivate();
     }
 }
+

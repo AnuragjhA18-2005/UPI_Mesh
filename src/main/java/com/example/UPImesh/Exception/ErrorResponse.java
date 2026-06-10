@@ -1,4 +1,4 @@
-package com.example.UPImesh.Exception;
+package com.example.UPImesh.exception;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -17,3 +17,4 @@ public record ErrorResponse(
         this(message, status, LocalDateTime.now(), details);
     }
 }
+

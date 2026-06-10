@@ -7,9 +7,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
-import com.example.UPImesh.Model.Account;
-import com.example.UPImesh.Repositories.AccountRepo;
-import com.example.UPImesh.Service.SettlementService;
+import com.example.UPImesh.model.Account;
+import com.example.UPImesh.repositories.AccountRepo;
+import com.example.UPImesh.service.SettlementService;
 
 @SpringBootApplication
 public class UpImeshApplication {
@@ -37,3 +37,4 @@ public class UpImeshApplication {
 	}
 
 }
+

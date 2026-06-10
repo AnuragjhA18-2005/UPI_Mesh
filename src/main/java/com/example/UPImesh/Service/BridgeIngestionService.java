@@ -1,4 +1,4 @@
-package com.example.UPImesh.Service;
+package com.example.UPImesh.service;
 
 import java.time.Instant;
 import org.slf4j.Logger;
@@ -7,10 +7,10 @@ import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.example.UPImesh.Crypto.HybridCryptoService;
-import com.example.UPImesh.Model.MeshPacket;
-import com.example.UPImesh.Model.PaymentInstruction;
-import com.example.UPImesh.Model.Transaction;
+import com.example.UPImesh.crypto.HybridCryptoService;
+import com.example.UPImesh.model.MeshPacket;
+import com.example.UPImesh.model.PaymentInstruction;
+import com.example.UPImesh.model.Transaction;
 
 @Service
 public class BridgeIngestionService {
@@ -68,3 +68,4 @@ public class BridgeIngestionService {
         }
     }
 }
+

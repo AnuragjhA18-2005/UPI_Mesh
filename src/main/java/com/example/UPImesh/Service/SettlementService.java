@@ -1,4 +1,4 @@
-package com.example.UPImesh.Service;
+package com.example.UPImesh.service;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -6,10 +6,10 @@ import java.time.Instant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.example.UPImesh.Model.Account;
-import com.example.UPImesh.Model.Transaction;
-import com.example.UPImesh.Repositories.AccountRepo;
-import com.example.UPImesh.Repositories.TransactionRepo;
+import com.example.UPImesh.model.Account;
+import com.example.UPImesh.model.Transaction;
+import com.example.UPImesh.repositories.AccountRepo;
+import com.example.UPImesh.repositories.TransactionRepo;
 
 import jakarta.transaction.Transactional;
 
@@ -66,3 +66,4 @@ public class SettlementService {
     }
 
 }
+

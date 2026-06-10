@@ -1,4 +1,4 @@
-package com.example.UPImesh.Model;
+package com.example.UPImesh.model;
 
 import java.math.BigDecimal;
 
@@ -41,3 +41,4 @@ public class Account {
 
     
 }
+

@@ -1,4 +1,4 @@
-package com.example.UPImesh.Crypto;
+package com.example.UPImesh.crypto;
 
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
@@ -17,7 +17,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.example.UPImesh.Model.PaymentInstruction;
+import com.example.UPImesh.model.PaymentInstruction;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
@@ -105,3 +105,4 @@ public class HybridCryptoService {
         return Base64.getEncoder().encodeToString(buf.array());
     }
 }
+

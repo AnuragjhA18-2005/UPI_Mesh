@@ -1,4 +1,4 @@
-package com.example.UPImesh.Model;
+package com.example.UPImesh.model;
 
 public class MeshPacket {
     private String packetId; // uuid to track the packet in the mesh network
@@ -29,3 +29,4 @@ public class MeshPacket {
         this.cipherText = cipherText;
     } 
 }
+

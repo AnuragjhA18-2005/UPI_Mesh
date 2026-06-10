@@ -1,4 +1,4 @@
-package com.example.UPImesh.Config;
+package com.example.UPImesh.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -8,7 +8,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
-import com.example.UPImesh.Security.JWTfilter;
+import com.example.UPImesh.security.JWTfilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
@@ -42,3 +42,4 @@ public class SecurityConfig {
         return http.build();
     }
 }
+

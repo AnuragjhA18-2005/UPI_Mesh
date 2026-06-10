@@ -1,4 +1,4 @@
-package com.example.UPImesh.Controller;
+package com.example.UPImesh.controller;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -10,10 +10,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.UPImesh.Crypto.HybridCryptoService;
-import com.example.UPImesh.Crypto.ServerKeyHolder;
-import com.example.UPImesh.Model.MeshPacket;
-import com.example.UPImesh.Model.PaymentInstruction;
+import com.example.UPImesh.crypto.HybridCryptoService;
+import com.example.UPImesh.crypto.ServerKeyHolder;
+import com.example.UPImesh.model.MeshPacket;
+import com.example.UPImesh.model.PaymentInstruction;
 
 @RestController
 @RequestMapping("/api/demo")
@@ -39,3 +39,4 @@ public class DemoController {
         return ResponseEntity.ok(packet);
     }
 }
+

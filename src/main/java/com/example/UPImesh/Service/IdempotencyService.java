@@ -1,4 +1,4 @@
-package com.example.UPImesh.Service;
+package com.example.UPImesh.service;
 
 import java.time.Instant;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,3 +16,4 @@ public class IdempotencyService {//This is your idempotency check. Its job is to
     }
     // claim() atomically records a packet hash and returns true only for the first thread that sees that hash, preventing duplicate processing of the same payment packet.
 }
+

@@ -1,4 +1,4 @@
-package com.example.UPImesh.Security;
+package com.example.UPImesh.security;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
@@ -42,3 +42,4 @@ public class JWTutil {
     }
 
 }
+

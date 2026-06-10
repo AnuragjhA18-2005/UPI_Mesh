@@ -1,4 +1,4 @@
-package com.example.UPImesh.Model;
+package com.example.UPImesh.model;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -80,3 +80,4 @@ public class Transaction {
     }
 
 }
+

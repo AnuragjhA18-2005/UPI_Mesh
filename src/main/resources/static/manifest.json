@@ -1,0 +1,15 @@
+{
+  "name": "UPImesh",
+  "short_name": "UPImesh",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#0a0a0c",
+  "theme_color": "#0a0a0c",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/10149/10149458.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

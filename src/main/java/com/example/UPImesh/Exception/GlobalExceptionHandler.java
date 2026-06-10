@@ -1,4 +1,4 @@
-package com.example.UPImesh.Exception;
+package com.example.UPImesh.exception;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -60,3 +60,4 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
+
