@@ -322,7 +322,8 @@ body {
     position: fixed;
     top: 20px;
     left: 50%;
-    transform: translateX(-50%) translateY(-100px);
+    transform: translateX(-50%) translateY(-200px); /* Increased offset to hide completely */
+    visibility: hidden; /* Added to prevent interaction and visual leaks */
     background: rgba(22, 22, 26, 0.95);
     color: white;
     padding: 16px 24px;
@@ -332,7 +333,7 @@ body {
     z-index: 2000;
     font-size: 0.9rem;
     font-weight: 500;
-    transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55), visibility 0.3s;
     backdrop-filter: blur(10px);
     width: 90%;
     max-width: 400px;
@@ -343,6 +344,7 @@ body {
 
 .toast.show {
     transform: translateX(-50%) translateY(0);
+    visibility: visible;
 }
 
 .toast.error {

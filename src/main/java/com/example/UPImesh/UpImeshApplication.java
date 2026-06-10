@@ -23,9 +23,9 @@ public class UpImeshApplication {
 	public CommandLineRunner testRunner(AccountRepo accountRepo,SettlementService settlementService){
 		return args ->{
 			if (accountRepo.count()==0) {
-				accountRepo.save(new Account("alice_phone",new BigDecimal("1000.0")));
-				accountRepo.save(new Account("bob_phone",new BigDecimal("500.0")));
-				System.out.println("Seeded Alice and Bob into the database.");
+				accountRepo.save(new Account("alice_phone",new BigDecimal("5000.0")));
+				accountRepo.save(new Account("bob_phone",new BigDecimal("5000.0")));
+				System.out.println("Seeded Alice and Bob with ₹5,000 each.");
 			}
 
 			// try {
