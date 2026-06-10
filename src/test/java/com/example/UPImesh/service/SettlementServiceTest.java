@@ -30,59 +30,64 @@ public class SettlementServiceTest {
 
     private final String SENDER_ID = "sender@upimesh";
     private final String NEW_RECEIVER_ID = "newuser@upimesh";
+    private final BigDecimal INITIAL_BALANCE = new BigDecimal("1000.00");
 
     @BeforeEach
     void setUp() {
         transactionRepo.deleteAll();
         accountRepo.deleteAll();
-        accountRepo.save(new Account(SENDER_ID, new BigDecimal("1000.00")));
+        accountRepo.save(new Account(SENDER_ID, INITIAL_BALANCE));
     }
 
     @Test
-    void testProcessPaymentWithAutoDiscovery() {
+    void shouldProcessPaymentAndAutoDiscoverNewReceiver() {
         BigDecimal amount = new BigDecimal("100.00");
-        String packetId = "test-packet-1";
-        String nonce = "nonce-1";
+        String packetId = "packet-discovery";
+        String nonce = "nonce-discovery";
 
-        // Process payment to a non-existent account
+        // Act
         Transaction tx = settlementService.processPayment(SENDER_ID, NEW_RECEIVER_ID, amount, packetId, nonce);
 
+        // Assert
         assertNotNull(tx);
         assertEquals(SENDER_ID, tx.getSenderID());
         assertEquals(NEW_RECEIVER_ID, tx.getReceiverID());
         assertEquals(amount, tx.getAmount());
         assertEquals(nonce, tx.getNonce());
 
-        // Verify accounts
         Account sender = accountRepo.findById(SENDER_ID).orElseThrow();
         Account receiver = accountRepo.findById(NEW_RECEIVER_ID).orElseThrow();
 
-        assertEquals(new BigDecimal("900.00"), sender.getBalance());
-        assertEquals(new BigDecimal("100.00"), receiver.getBalance());
+        assertEquals(INITIAL_BALANCE.subtract(amount), sender.getBalance());
+        assertEquals(amount, receiver.getBalance());
     }
 
     @Test
-    void testTransactionSyncFetch() {
-        BigDecimal amount = new BigDecimal("50.00");
+    void shouldFetchTransactionsInDescendingOrder() {
+        BigDecimal amountP1 = new BigDecimal("50.00");
+        BigDecimal amountP2 = new BigDecimal("20.00");
+        String otherUser = "other@upimesh";
         
         // 1. Sender pays Receiver
-        settlementService.processPayment(SENDER_ID, NEW_RECEIVER_ID, amount, "p1", "n1");
+        settlementService.processPayment(SENDER_ID, NEW_RECEIVER_ID, amountP1, "p1", "n1");
         
         // 2. Someone else pays Sender (Sender becomes receiver)
-        String otherUser = "other@upimesh";
         accountRepo.save(new Account(otherUser, new BigDecimal("500.00")));
-        settlementService.processPayment(otherUser, SENDER_ID, new BigDecimal("20.00"), "p2", "n2");
+        settlementService.processPayment(otherUser, SENDER_ID, amountP2, "p2", "n2");
 
         // Fetch transactions for SENDER_ID
         List<Transaction> txs = transactionRepo.findBySenderIDOrReceiverIDOrderByTimestampDesc(SENDER_ID, SENDER_ID);
 
         assertEquals(2, txs.size(), "Should find both sent and received transactions");
         
-        // Latest first
+        // Verify latest first (p2)
         assertEquals("p2", txs.get(0).getPacketId());
         assertEquals(SENDER_ID, txs.get(0).getReceiverID());
+        assertEquals(amountP2, txs.get(0).getAmount());
         
+        // Then p1
         assertEquals("p1", txs.get(1).getPacketId());
         assertEquals(SENDER_ID, txs.get(1).getSenderID());
+        assertEquals(amountP1, txs.get(1).getAmount());
     }
 }
