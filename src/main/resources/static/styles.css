@@ -270,8 +270,17 @@ body {
     color: var(--accent-green);
 }
 
+.badge-error {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--accent-red);
+}
+
 .queue-item.settled {
     border-color: rgba(16, 185, 129, 0.3);
+}
+
+.history-item.failed {
+    border-left: 4px solid var(--accent-red);
 }
 
 .time {
@@ -301,6 +310,8 @@ body {
 .account-dropdown:focus {
     border-color: var(--accent-blue);
 }
+
+.bottom-nav {
     position: fixed;
     bottom: 0;
     left: 0;

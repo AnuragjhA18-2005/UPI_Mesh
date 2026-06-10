@@ -197,17 +197,30 @@ function renderHistory(settledTxs, unsettledTxs) {
 
     historyList.innerHTML = allTxs.map(tx => {
         const isPending = tx.isPending;
+        const isFailed = tx.status === 'FAILED' || tx.id === 'FAILED';
+        
+        let statusBadge = 'badge-success';
+        let statusLabel = 'Settled';
+        
+        if (isPending) {
+            statusBadge = 'badge-pending';
+            statusLabel = 'Pending';
+        } else if (isFailed) {
+            statusBadge = 'badge-error';
+            statusLabel = 'Failed';
+        }
+
         return `
-            <div class="history-item ${isPending ? 'pending' : ''}">
+            <div class="history-item ${isPending ? 'pending' : (isFailed ? 'failed' : '')}">
                 <div class="item-info">
                     <p class="receiver">To: ${isPending ? tx.receiver : tx.receiverID}</p>
                     <p class="amount">₹ ${parseFloat(tx.amount).toFixed(2)}</p>
                     <small style="color: var(--text-secondary); font-size: 0.6rem; display: block; margin-top: 4px;">
-                        ${isPending ? 'Pending' : 'TX ID: ' + tx.id} | ${new Date(tx.timestamp || tx.signedAt).toLocaleDateString()}
+                        ${isPending ? 'Pending' : (isFailed ? 'Rejected by Bank' : 'TX ID: ' + tx.id)} | ${new Date(tx.timestamp || tx.signedAt).toLocaleDateString()}
                     </small>
                 </div>
                 <div class="item-status">
-                    <span class="badge ${isPending ? 'badge-pending' : 'badge-success'}">${isPending ? 'Pending' : 'Settled'}</span>
+                    <span class="badge ${statusBadge}">${statusLabel}</span>
                     <p class="time">${new Date(tx.timestamp || tx.signedAt).toLocaleTimeString()}</p>
                 </div>
             </div>`;
@@ -256,6 +269,7 @@ async function flushQueue() {
                     senderID: STATE.activeAccount,
                     receiverID: packet.receiver,
                     amount: packet.amount,
+                    status: 'SETTLED',
                     timestamp: new Date().toISOString(),
                     packetId: packet.packetId
                 });
@@ -265,8 +279,18 @@ async function flushQueue() {
                 if (document.getElementById('view-history').classList.contains('active')) fetchHistory();
                 showNotification(`Payment of ₹${packet.amount} for ${packet.receiver} settled!`, 'success');
             } else if (response.status === 400) {
+                addToLocalHistory({
+                    id: 'FAILED',
+                    senderID: STATE.activeAccount,
+                    receiverID: packet.receiver,
+                    amount: packet.amount,
+                    status: 'FAILED',
+                    timestamp: new Date().toISOString(),
+                    packetId: packet.packetId
+                });
                 showNotification(`Payment Failed: ${packet.receiver} rejected (Insufficient Funds).`, 'error');
                 removeFromQueue(packet.packetId);
+                if (document.getElementById('view-history').classList.contains('active')) fetchHistory();
             }
         } catch (err) { break; }
     }
