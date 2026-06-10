@@ -22,19 +22,10 @@ public class UpImeshApplication {
 	@Bean
 	public CommandLineRunner testRunner(AccountRepo accountRepo,SettlementService settlementService){
 		return args ->{
-			if (accountRepo.count()==0) {
-				accountRepo.save(new Account("alice_phone",new BigDecimal("5000.0")));
-				accountRepo.save(new Account("bob_phone",new BigDecimal("5000.0")));
-				System.out.println("Seeded Alice and Bob with ₹5,000 each.");
-			}
-
-			// try {
-			// 	System.out.println("Attempting to transfer 200 from alice to bob..");
-			// 	settlementService.processPayment("alice_phone", "bob_phone", new BigDecimal("200.00"), "test_001");
-			// 	System.out.println("Transaction Succesfull...");
-			// } catch (Exception e) {
-			// 	System.out.println("Transfer Failed: "+e.getMessage());
-			// }
+			// Force reset Alice and Bob for the demo
+			accountRepo.save(new Account("alice_phone",new BigDecimal("5000.0")));
+			accountRepo.save(new Account("bob_phone",new BigDecimal("5000.0")));
+			System.out.println("Demo Environment Reset: Alice and Bob set to ₹5,000.");
 		};
 	}
 
