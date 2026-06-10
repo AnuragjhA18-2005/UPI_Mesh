@@ -17,21 +17,23 @@ public class Transaction {
     private String receiverID;
     private BigDecimal amount;
     private Instant timestamp;
-    private String packetId;// to track which offline packet caused this 
+    private String packetId; // to track which offline packet caused this 
+    private String nonce;    // from the payment instruction to prevent replays
 
     public Transaction() {}
 
     public Transaction(long id, String senderID, String receiverID, BigDecimal amount, Instant timestamp,
-            String packetId) {
+            String packetId, String nonce) {
         this.id = id;
         this.senderID = senderID;
         this.receiverID = receiverID;
         this.amount = amount;
         this.timestamp = timestamp;
         this.packetId = packetId;
+        this.nonce = nonce;
     }
 
-     public long getId() {
+    public long getId() {
         return id;
     }
 
@@ -79,5 +81,11 @@ public class Transaction {
         this.packetId = packetId;
     }
 
-}
+    public String getNonce() {
+        return nonce;
+    }
 
+    public void setNonce(String nonce) {
+        this.nonce = nonce;
+    }
+}

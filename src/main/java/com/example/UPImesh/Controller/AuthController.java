@@ -2,12 +2,12 @@ package com.example.UPImesh.controller;
 
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 
 import com.example.UPImesh.security.JWTutil;
 
@@ -15,6 +15,12 @@ import com.example.UPImesh.security.JWTutil;
 @RequestMapping("/api/auth")
 public class AuthController {
     private final JWTutil jwtUtil;
+    
+    @Value("${app.auth.username}")
+    private String configuredUsername;
+    
+    @Value("${app.auth.password}")
+    private String configuredPassword;
 
     public AuthController(JWTutil jwtUtil) {
         this.jwtUtil = jwtUtil;
@@ -25,7 +31,7 @@ public class AuthController {
         String username = credentials.get("username");
         String password = credentials.get("password");
 
-        if ("bridge-node-1".equals(username) && "secret123".equals(password)) {
+        if (configuredUsername.equals(username) && configuredPassword.equals(password)) {
             String token = jwtUtil.generateToken(username);
             return ResponseEntity.ok(Map.of("token",token));
         }

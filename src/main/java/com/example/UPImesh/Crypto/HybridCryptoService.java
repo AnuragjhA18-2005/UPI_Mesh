@@ -38,6 +38,10 @@ public class HybridCryptoService {
     public PaymentInstruction decrypt(String base64Ciphertext) throws Exception{
         byte[] all = Base64.getDecoder().decode(base64Ciphertext);
 
+        if (all.length < RSA_KEY_BYTES + 12) {
+            throw new IllegalArgumentException("Invalid ciphertext: length is too short to contain key, IV, and data");
+        }
+
         //Unpacking the Byte Array
 
         byte[] encryptedAESkey=new byte[RSA_KEY_BYTES];

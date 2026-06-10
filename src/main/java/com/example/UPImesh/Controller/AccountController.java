@@ -39,6 +39,6 @@ public class AccountController {
 
     @GetMapping("/{id}/transactions")
     public ResponseEntity<List<Transaction>> getTransactions(@PathVariable String id) {
-        return ResponseEntity.ok(transactionRepo.findBySenderIDOrderByTimestampDesc(id));
+        return ResponseEntity.ok(transactionRepo.findBySenderIDOrReceiverIDOrderByTimestampDesc(id, id));
     }
 }

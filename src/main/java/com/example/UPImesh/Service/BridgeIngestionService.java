@@ -31,14 +31,17 @@ public class BridgeIngestionService {
 
     public String ingest(MeshPacket packet) {
         MDC.put("packetId", packet.getPacketId());
+        boolean claimed = false;
+        String packetHash = null;
         try {
             log.info("Starting ingestion for packet");
+            packetHash = hybridCryptoService.hashCipherText(packet.getCipherText());
 
-            String packetHash = hybridCryptoService.hashCipherText(packet.getCipherText());
             if (!idempotencyService.claim(packetHash)) {
                 log.warn("Duplicate packet dropped. Hash: {}", packetHash);
                 throw new IllegalArgumentException("DUPLICATE_PACKET_DROPPED");
             }
+            claimed = true;
 
             log.debug("Packet hash claimed, proceeding to decryption");
             
@@ -55,6 +58,7 @@ public class BridgeIngestionService {
                 instruction.setReceiverID(node.get("receiver").asText());
                 instruction.setAmount(new java.math.BigDecimal(node.get("amount").asText()));
                 instruction.setSignedAt(node.has("timestamp") ? node.get("timestamp").asLong() : Instant.now().toEpochMilli());
+                instruction.setNonce(node.has("nonce") ? node.get("nonce").asText() : java.util.UUID.randomUUID().toString());
             } else {
                 instruction = hybridCryptoService.decrypt(packet.getCipherText());
             }
@@ -71,16 +75,23 @@ public class BridgeIngestionService {
                 instruction.getSenderID(),
                 instruction.getReceiverID(),
                 instruction.getAmount(),
-                packet.getPacketId()
+                packet.getPacketId(),
+                instruction.getNonce()
             );
 
             log.info("Transaction settled successfully. Transaction ID: {}", ts.getId());
             return "SETTLED:Transaction ID " + ts.getId();
 
         } catch (IllegalArgumentException | IllegalStateException e) {
-            // Re-throw these to be handled by GlobalExceptionHandler
+            // Release claim if it failed for reasons other than being a duplicate
+            if (claimed && !"DUPLICATE_PACKET_DROPPED".equals(e.getMessage())) {
+                idempotencyService.release(packetHash);
+            }
             throw e;
         } catch (Exception e) {
+            if (claimed) {
+                idempotencyService.release(packetHash);
+            }
             log.error("Unexpected error during packet ingestion: ", e);
             throw new RuntimeException("Error processing packet: " + e.getMessage(), e);
         } finally {

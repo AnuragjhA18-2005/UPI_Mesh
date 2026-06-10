@@ -17,6 +17,10 @@ public class IdempotencyService {//This is your idempotency check. Its job is to
         return previous==null;
     }
 
+    public void release(String packetHash) {
+        seenHashes.remove(packetHash);
+    }
+
     @Scheduled(fixedDelay = 3600000) // Run every hour
     public void cleanup() {
         Instant threshold = Instant.now().minus(24, ChronoUnit.HOURS);

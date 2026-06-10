@@ -121,8 +121,10 @@ async function fetchIdentities() {
             const accounts = await res.json();
             const select = document.getElementById('account-select');
             if (select) {
+                // Store the current selection to restore it after re-rendering
+                const currentSelection = select.value || STATE.activeAccount;
                 select.innerHTML = accounts.map(acc => 
-                    `<option value="${acc.id}" ${acc.id === STATE.activeAccount ? 'selected' : ''}>${acc.id}</option>`
+                    `<option value="${acc.accountId}" ${acc.accountId === currentSelection ? 'selected' : ''}>${acc.accountId}</option>`
                 ).join('');
             }
         }
@@ -198,6 +200,7 @@ function renderHistory(settledTxs, unsettledTxs) {
     historyList.innerHTML = allTxs.map(tx => {
         const isPending = tx.isPending;
         const isFailed = tx.status === 'FAILED' || tx.id === 'FAILED';
+        const isReceiver = !isPending && tx.receiverID === STATE.activeAccount;
         
         let statusBadge = 'badge-success';
         let statusLabel = 'Settled';
@@ -210,11 +213,16 @@ function renderHistory(settledTxs, unsettledTxs) {
             statusLabel = 'Failed';
         }
 
+        const partyLabel = isReceiver ? 'From: ' : 'To: ';
+        const partyID = isPending ? tx.receiver : (isReceiver ? tx.senderID : tx.receiverID);
+
         return `
-            <div class="history-item ${isPending ? 'pending' : (isFailed ? 'failed' : '')}">
+            <div class="history-item ${isPending ? 'pending' : (isFailed ? 'failed' : '')} ${isReceiver ? 'received' : ''}">
                 <div class="item-info">
-                    <p class="receiver">To: ${isPending ? tx.receiver : tx.receiverID}</p>
-                    <p class="amount">₹ ${parseFloat(tx.amount).toFixed(2)}</p>
+                    <p class="receiver">${partyLabel}${partyID}</p>
+                    <p class="amount" style="color: ${isReceiver ? 'var(--accent-green)' : 'inherit'}">
+                        ${isReceiver ? '+' : '−'} ₹ ${parseFloat(tx.amount).toFixed(2)}
+                    </p>
                     <small style="color: var(--text-secondary); font-size: 0.6rem; display: block; margin-top: 4px;">
                         ${isPending ? 'Pending' : (isFailed ? 'Rejected by Bank' : 'TX ID: ' + tx.id)} | ${new Date(tx.timestamp || tx.signedAt).toLocaleDateString()}
                     </small>
@@ -276,9 +284,14 @@ async function flushQueue() {
 
                 removeFromQueue(packet.packetId);
                 fetchBalance();
+                fetchIdentities();
                 if (document.getElementById('view-history').classList.contains('active')) fetchHistory();
                 showNotification(`Payment of ₹${packet.amount} for ${packet.receiver} settled!`, 'success');
             } else if (response.status === 400) {
+                // Parse error message from backend
+                const errorData = await response.json().catch(() => ({ message: 'Insufficient Funds' }));
+                const errorMsg = errorData.message || 'Rejected by Bank';
+                
                 addToLocalHistory({
                     id: 'FAILED',
                     senderID: STATE.activeAccount,
@@ -288,11 +301,17 @@ async function flushQueue() {
                     timestamp: new Date().toISOString(),
                     packetId: packet.packetId
                 });
-                showNotification(`Payment Failed: ${packet.receiver} rejected (Insufficient Funds).`, 'error');
+                
+                showNotification(`Payment Failed: ${packet.receiver} (${errorMsg}).`, 'error');
                 removeFromQueue(packet.packetId);
                 if (document.getElementById('view-history').classList.contains('active')) fetchHistory();
+            } else {
+                console.warn(`[Sync] Server returned ${response.status} for ${packet.packetId}`);
             }
-        } catch (err) { break; }
+        } catch (err) { 
+            console.error("[Sync] Loop error:", err);
+            if (!navigator.onLine) break; 
+        }
     }
     STATE.isSyncing = false;
 }
@@ -313,6 +332,24 @@ async function fetchBalance() {
 function initBalance() {
     const last = localStorage.getItem(getAccountKey(CONFIG.BALANCE_KEY_PREFIX)) || '0.00';
     document.querySelector('.balance').innerText = `₹ ${last}`;
+}
+
+// --- Utility Functions ---
+/** Displays a toast notification */
+function showNotification(message, type = 'success') {
+    const toast = document.getElementById('notification-toast');
+    if (!toast) {
+        console.log(`[Notification] ${type.toUpperCase()}: ${message}`);
+        return;
+    }
+
+    toast.innerHTML = `<span>${type === 'success' ? '✅' : '❌'}</span> ${message}`;
+    toast.className = `toast show ${type}`;
+
+    // Auto-hide after 4 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 4000);
 }
 
 async function generateOfflinePacket(receiver, amount) {

@@ -10,6 +10,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 import com.example.UPImesh.model.Account;
 import com.example.UPImesh.repositories.AccountRepo;
+import com.example.UPImesh.repositories.TransactionRepo;
 import com.example.UPImesh.service.SettlementService;
 
 @SpringBootApplication
@@ -20,13 +21,16 @@ public class UpImeshApplication {
 		SpringApplication.run(UpImeshApplication.class, args);
 	}
 	@Bean
-	public CommandLineRunner testRunner(AccountRepo accountRepo,SettlementService settlementService){
+	public CommandLineRunner testRunner(AccountRepo accountRepo, TransactionRepo transactionRepo, SettlementService settlementService){
 		return args ->{
+			// Clear transaction history
+			transactionRepo.deleteAll();
+			
 			// Seed test accounts for the prototype
 			saveOrUpdateAccount(accountRepo, "alice@upimesh", new BigDecimal("5000.0"));
 			saveOrUpdateAccount(accountRepo, "bob@upimesh", new BigDecimal("5000.0"));
 			saveOrUpdateAccount(accountRepo, "charlie@upimesh", new BigDecimal("5000.0"));
-			System.out.println("Prototype Environment Seeded: Alice, Bob, and Charlie set to ₹5,000.");
+			System.out.println("Prototype Environment Seeded: Alice, Bob, and Charlie set to ₹5,000. History cleared.");
 		};
 	}
 
