@@ -1,4 +1,4 @@
-const CACHE_NAME = 'upimesh-v1';
+const CACHE_NAME = 'upimesh-v2';
 const ASSETS = [
     '/',
     '/index.html',
@@ -8,18 +8,15 @@ const ASSETS = [
     'https://cdn-icons-png.flaticon.com/512/10149/10149458.png'
 ];
 
-// Install Event: Cache all static assets
+// Install Event
 self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => {
-            console.log('[Service Worker] Caching App Shell');
-            return cache.addAll(ASSETS);
-        })
+        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
     );
     self.skipWaiting();
 });
 
-// Activate Event: Clean up old caches
+// Activate Event
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((keys) => {
@@ -30,19 +27,21 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Fetch Event: Cache-First Strategy
+// Fetch Event: Network-First for API, Cache-First for Assets
 self.addEventListener('fetch', (event) => {
+    const url = new URL(event.request.url);
+
+    // Bypass cache for all /api/ calls to ensure heartbeat and ingestion are real network probes
+    if (url.pathname.startsWith('/api/')) {
+        return; // Let it go to the network directly
+    }
+
     event.respondWith(
         caches.match(event.request).then((cachedResponse) => {
             if (cachedResponse) {
                 return cachedResponse;
             }
-            return fetch(event.request).then((networkResponse) => {
-                // Optionally cache new assets here if needed
-                return networkResponse;
-            });
-        }).catch(() => {
-            // Fallback if both fail (optional)
+            return fetch(event.request);
         })
     );
 });

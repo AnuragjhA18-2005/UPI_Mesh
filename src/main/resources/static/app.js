@@ -267,6 +267,9 @@ const updateNetworkStatus = async () => {
 window.addEventListener('online', updateNetworkStatus);
 window.addEventListener('offline', updateNetworkStatus);
 
+// Regular polling to catch DevTools state changes or network drops
+setInterval(updateNetworkStatus, 5000);
+
 document.addEventListener('DOMContentLoaded', () => {
     // Initial status check
     updateNetworkStatus();
