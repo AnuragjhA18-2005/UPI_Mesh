@@ -15,11 +15,13 @@ import jakarta.transaction.Transactional;
 
 @Service
 public class SettlementService {
-    @Autowired
-    private AccountRepo accountrepo;
+    private final AccountRepo accountRepo;
+    private final TransactionRepo transactionRepo;
 
-    @Autowired
-    private TransactionRepo transactionrepo;
+    public SettlementService(AccountRepo accountRepo, TransactionRepo transactionRepo) {
+        this.accountRepo = accountRepo;
+        this.transactionRepo = transactionRepo;
+    }
 
     @Transactional // it ensures that if the app crashes right after sender sends the money and before it reaches receivers ,the database transaction rolls back and no one loses money
     // @Transactional makes a group of database operations behave as a single unit—either all succeed and commit, or all fail and rollback.
@@ -40,12 +42,12 @@ public class SettlementService {
             throw new IllegalArgumentException("Packet ID must not be null or blank");
         }
 
-        if (transactionrepo.existsByPacketId(packetId)) {
+        if (transactionRepo.existsByPacketId(packetId)) {
             throw new IllegalArgumentException("Packet already processed");
         }
-        Account sender = accountrepo.findById(senderID)
+        Account sender = accountRepo.findById(senderID)
                 .orElseThrow(() -> new IllegalArgumentException("Sender Account Not Found"));
-        Account receiver = accountrepo.findById(receiverID)
+        Account receiver = accountRepo.findById(receiverID)
                 .orElseThrow(() -> new IllegalArgumentException("Receiver Account Not Found"));
 
         if (sender.getBalance() == null || receiver.getBalance() == null) {
@@ -58,11 +60,11 @@ public class SettlementService {
         sender.setBalance(sender.getBalance().subtract(amount));
         receiver.setBalance(receiver.getBalance().add(amount));
 
-        accountrepo.save(sender);
-        accountrepo.save(receiver);
+        accountRepo.save(sender);
+        accountRepo.save(receiver);
 
         Transaction transaction = new Transaction(0, senderID, receiverID, amount, Instant.now(), packetId);
-        return transactionrepo.save(transaction);
+        return transactionRepo.save(transaction);
     }
 
 }

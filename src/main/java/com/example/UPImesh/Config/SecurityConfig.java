@@ -5,11 +5,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.example.UPImesh.security.JWTfilter;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -24,7 +25,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Publicly accessible static resources
@@ -33,8 +35,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/demo/generate-packet").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers("/error").permitAll()
-                        // Protected API endpoints
-                        .requestMatchers(HttpMethod.POST, "/api/bridge/ingest").authenticated()
+                        // Protected API endpoints (Requires ROLE_USER)
+                        .requestMatchers(HttpMethod.POST, "/api/bridge/ingest").hasRole("USER")
                         .anyRequest().authenticated())
                 // Add JWT filter before the standard authentication filter
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
@@ -42,4 +44,3 @@ public class SecurityConfig {
         return http.build();
     }
 }
-

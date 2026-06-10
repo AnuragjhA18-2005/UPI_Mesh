@@ -1,6 +1,5 @@
 package com.example.UPImesh.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -14,8 +13,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RestController
 @RequestMapping("/api/bridge")
 public class BridgeController {
-    @Autowired
-    private BridgeIngestionService bridgeIngestionService;
+    private final BridgeIngestionService bridgeIngestionService;
+
+    public BridgeController(BridgeIngestionService bridgeIngestionService) {
+        this.bridgeIngestionService = bridgeIngestionService;
+    }
     
     @PostMapping("/ingest")
     public ResponseEntity<String> ingestPacket(@RequestBody MeshPacket packet) {

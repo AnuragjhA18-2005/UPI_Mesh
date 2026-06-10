@@ -14,7 +14,6 @@ import javax.crypto.spec.OAEPParameterSpec;
 import javax.crypto.spec.PSource;
 import javax.crypto.spec.SecretKeySpec;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.example.UPImesh.model.PaymentInstruction;
@@ -22,8 +21,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class HybridCryptoService {
-    @Autowired
-    private ServerKeyHolder serverKeyHolder;
+    private final ServerKeyHolder serverKeyHolder;
+
+    public HybridCryptoService(ServerKeyHolder serverKeyHolder) {
+        this.serverKeyHolder = serverKeyHolder;
+    }
 
     private final ObjectMapper json= new ObjectMapper();//used to convert java object to json bytes
     private final SecureRandom rng = new SecureRandom();

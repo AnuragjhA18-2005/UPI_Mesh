@@ -4,7 +4,6 @@ import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.example.UPImesh.crypto.HybridCryptoService;
@@ -16,12 +15,17 @@ import com.example.UPImesh.model.Transaction;
 public class BridgeIngestionService {
     private static final Logger log = LoggerFactory.getLogger(BridgeIngestionService.class);
 
-    @Autowired
-    private HybridCryptoService hybridCryptoService;
-    @Autowired
-    private IdempotencyService idempotencyService;
-    @Autowired
-    private SettlementService settlementService;
+    private final HybridCryptoService hybridCryptoService;
+    private final IdempotencyService idempotencyService;
+    private final SettlementService settlementService;
+
+    public BridgeIngestionService(HybridCryptoService hybridCryptoService, 
+                                 IdempotencyService idempotencyService, 
+                                 SettlementService settlementService) {
+        this.hybridCryptoService = hybridCryptoService;
+        this.idempotencyService = idempotencyService;
+        this.settlementService = settlementService;
+    }
 
     private static final long MAX_AGE_MILLIS = 24 * 60 * 60 * 1000;
 

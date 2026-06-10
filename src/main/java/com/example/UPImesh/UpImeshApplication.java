@@ -6,12 +6,14 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import com.example.UPImesh.model.Account;
 import com.example.UPImesh.repositories.AccountRepo;
 import com.example.UPImesh.service.SettlementService;
 
 @SpringBootApplication
+@EnableScheduling
 public class UpImeshApplication {
 
 	public static void main(String[] args) {

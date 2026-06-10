@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,8 +17,13 @@ import com.example.UPImesh.model.PaymentInstruction;
 @RestController
 @RequestMapping("/api/demo")
 public class DemoController {
-    @Autowired private HybridCryptoService hybridCryptoService;
-    @Autowired private ServerKeyHolder serverKeyHolder;
+    private final HybridCryptoService hybridCryptoService;
+    private final ServerKeyHolder serverKeyHolder;
+
+    public DemoController(HybridCryptoService hybridCryptoService, ServerKeyHolder serverKeyHolder) {
+        this.hybridCryptoService = hybridCryptoService;
+        this.serverKeyHolder = serverKeyHolder;
+    }
 
     @GetMapping("/generate-packet")
     public ResponseEntity<MeshPacket> generateTestPacket() throws Exception{
