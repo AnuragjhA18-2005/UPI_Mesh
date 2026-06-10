@@ -14,6 +14,8 @@ import com.example.UPImesh.crypto.ServerKeyHolder;
 import com.example.UPImesh.model.MeshPacket;
 import com.example.UPImesh.model.PaymentInstruction;
 
+import org.springframework.web.bind.annotation.RequestParam;
+
 @RestController
 @RequestMapping("/api/demo")
 public class DemoController {
@@ -26,15 +28,19 @@ public class DemoController {
     }
 
     @GetMapping("/generate-packet")
-    public ResponseEntity<MeshPacket> generateTestPacket() throws Exception{
+    public ResponseEntity<MeshPacket> generateTestPacket(
+            @RequestParam(defaultValue = "alice@upimesh") String sender,
+            @RequestParam(defaultValue = "bob@upimesh") String receiver,
+            @RequestParam(defaultValue = "100.00") BigDecimal amount) throws Exception {
+        
         PaymentInstruction instruction = new PaymentInstruction();
-        instruction.setSenderID("alice_phone"); // Assuming Alice is still in your DB
-        instruction.setReceiverID("bob_phone");
-        instruction.setAmount(new BigDecimal("100.00"));
+        instruction.setSenderID(sender);
+        instruction.setReceiverID(receiver);
+        instruction.setAmount(amount);
         instruction.setNonce(UUID.randomUUID().toString());
         instruction.setSignedAt(Instant.now().toEpochMilli());
 
-        String cipherText=hybridCryptoService.encrypt(instruction, serverKeyHolder.getPublicKey());
+        String cipherText = hybridCryptoService.encrypt(instruction, serverKeyHolder.getPublicKey());
 
         MeshPacket packet = new MeshPacket();
         packet.setPacketId(UUID.randomUUID().toString());

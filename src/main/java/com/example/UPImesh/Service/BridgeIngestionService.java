@@ -51,10 +51,10 @@ public class BridgeIngestionService {
                 com.fasterxml.jackson.databind.JsonNode node = new com.fasterxml.jackson.databind.ObjectMapper().readTree(decoded);
                 
                 instruction = new PaymentInstruction();
-                instruction.setSenderID("alice_phone"); // Always Alice for the demo
+                instruction.setSenderID(node.has("sender") ? node.get("sender").asText() : "alice@upimesh");
                 instruction.setReceiverID(node.get("receiver").asText());
                 instruction.setAmount(new java.math.BigDecimal(node.get("amount").asText()));
-                instruction.setSignedAt(Instant.now().toEpochMilli());
+                instruction.setSignedAt(node.has("timestamp") ? node.get("timestamp").asLong() : Instant.now().toEpochMilli());
             } else {
                 instruction = hybridCryptoService.decrypt(packet.getCipherText());
             }
