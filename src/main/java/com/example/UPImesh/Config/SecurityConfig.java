@@ -31,6 +31,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Publicly accessible static resources
                         .requestMatchers("/", "/index.html", "/styles.css", "/app.js", "/sw.js", "/manifest.json").permitAll()
+                        .requestMatchers("/api/health").permitAll()
                         // Public API endpoints
                         .requestMatchers(HttpMethod.GET, "/api/demo/generate-packet").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()

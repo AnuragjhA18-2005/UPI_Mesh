@@ -239,9 +239,8 @@ async function generateOfflinePacket(receiver, amount) {
 async function checkConnectivity() {
     if (!navigator.onLine) return false;
     try {
-        // Try to fetch a tiny asset to verify real connectivity
-        // We use a timestamp to bypass any cache
-        const res = await fetch('/manifest.json?t=' + Date.now(), { method: 'HEAD', cache: 'no-store' });
+        // Use the dedicated health check endpoint
+        const res = await fetch('/api/health?t=' + Date.now(), { method: 'GET', cache: 'no-store' });
         return res.ok;
     } catch (e) {
         return false;
