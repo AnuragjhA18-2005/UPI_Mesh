@@ -131,8 +131,8 @@ async function flushQueue() {
     // --- Automatic Authentication for Demo ---
     let token = localStorage.getItem(CONFIG.AUTH_KEY);
     
-    if (!token) {
-        console.log("[Bridge Sync] No token found. Attempting automatic login...");
+    if (!token || token === 'undefined' || token === 'null') {
+        console.log("[Bridge Sync] No valid token found. Attempting automatic login...");
         try {
             const authRes = await fetch('/api/auth/login', {
                 method: 'POST',
@@ -142,10 +142,16 @@ async function flushQueue() {
             if (authRes.ok) {
                 const authData = await authRes.json();
                 token = authData.token;
-                localStorage.setItem(CONFIG.AUTH_KEY, token);
-                console.log("[Bridge Sync] Login successful.");
+                if (token) {
+                    localStorage.setItem(CONFIG.AUTH_KEY, token);
+                    console.log("[Bridge Sync] Login successful. Token acquired.");
+                } else {
+                    console.error("[Bridge Sync] Login succeeded but no token returned.");
+                    STATE.isSyncing = false;
+                    return;
+                }
             } else {
-                console.error("[Bridge Sync] Auth failed. Check credentials.");
+                console.error("[Bridge Sync] Auth failed with status:", authRes.status);
                 STATE.isSyncing = false;
                 return;
             }
@@ -158,6 +164,7 @@ async function flushQueue() {
 
     for (const packet of queue) {
         try {
+            console.log(`[Bridge Sync] Attempting to ingest packet: ${packet.packetId}`);
             const response = await fetch('/api/bridge/ingest', {
                 method: 'POST',
                 headers: { 
@@ -172,17 +179,20 @@ async function flushQueue() {
 
             if (response.ok) {
                 const result = await response.text();
+                console.log(`[Bridge Sync] Success: ${result}`);
                 const txId = result.split('ID ')[1] || 'OK';
                 updatePacketStatus(packet.packetId, 'SETTLED', txId);
-                
-                // Cleanup settled items after a delay
                 setTimeout(() => removeFromQueue(packet.packetId), CONFIG.CLEANUP_DELAY);
+            } else if (response.status === 403 || response.status === 401) {
+                console.warn(`[Bridge Sync] Token rejected (403/401) for packet ${packet.packetId}. Clearing token.`);
+                localStorage.removeItem(CONFIG.AUTH_KEY);
+                break; 
             } else {
-                console.warn(`[Bridge Sync] Failed to process ${packet.packetId}: ${response.status}`);
+                console.warn(`[Bridge Sync] Server error (${response.status}) for packet ${packet.packetId}`);
             }
         } catch (err) {
-            console.error("[Bridge Sync] Network error during sync:", err);
-            break; // Stop iteration on network failure
+            console.error(`[Bridge Sync] Network error for ${packet.packetId}:`, err);
+            break; 
         }
     }
 
