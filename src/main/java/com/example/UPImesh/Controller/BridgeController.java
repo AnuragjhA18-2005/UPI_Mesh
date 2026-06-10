@@ -18,13 +18,8 @@ public class BridgeController {
     private BridgeIngestionService bridgeIngestionService;
     
     @PostMapping("/ingest")
-    public ResponseEntity<String> ingestPacket(@RequestBody MeshPacket packet){
-        String result=bridgeIngestionService.ingest(packet);
-
-        if (result.startsWith("INVALID") || result.startsWith("DUPLICATE")) {
-            return ResponseEntity.badRequest().body(result);
-        }
-        return ResponseEntity.ok(result);
+    public ResponseEntity<String> ingestPacket(@RequestBody MeshPacket packet) {
+        return ResponseEntity.ok(bridgeIngestionService.ingest(packet));
     }
     
 }
