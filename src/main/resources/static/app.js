@@ -182,7 +182,16 @@ async function flushQueue() {
                 console.log(`[Bridge Sync] Success: ${result}`);
                 const txId = result.split('ID ')[1] || 'OK';
                 updatePacketStatus(packet.packetId, 'SETTLED', txId);
+                
+                // Refresh balance after successful settlement
+                fetchBalance();
+                
                 setTimeout(() => removeFromQueue(packet.packetId), CONFIG.CLEANUP_DELAY);
+            } else if (response.status === 400) {
+                // TERMINAL ERROR: Business logic failure (e.g., Insufficient Funds)
+                console.error(`[Bridge Sync] Terminal failure for ${packet.packetId}: 400 Bad Request`);
+                alert(`Payment Failed: The server rejected a payment for ₹${packet.amount}. (Likely Insufficient Balance). It has been removed from the queue.`);
+                removeFromQueue(packet.packetId);
             } else if (response.status === 403 || response.status === 401) {
                 console.warn(`[Bridge Sync] Token rejected (403/401) for packet ${packet.packetId}. Clearing token.`);
                 localStorage.removeItem(CONFIG.AUTH_KEY);
