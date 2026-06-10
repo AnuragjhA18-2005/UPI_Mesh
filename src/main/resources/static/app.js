@@ -232,19 +232,37 @@ async function generateOfflinePacket(receiver, amount) {
 }
 
 // --- Event Handlers & Initialization ---
-const updateNetworkStatus = () => {
+/** 
+ * Checks if the backend is actually reachable 
+ * @returns {Promise<boolean>}
+ */
+async function checkConnectivity() {
+    if (!navigator.onLine) return false;
+    try {
+        // Try to fetch a tiny asset to verify real connectivity
+        // We use a timestamp to bypass any cache
+        const res = await fetch('/manifest.json?t=' + Date.now(), { method: 'HEAD', cache: 'no-store' });
+        return res.ok;
+    } catch (e) {
+        return false;
+    }
+}
+
+const updateNetworkStatus = async () => {
     const pulse = document.querySelector('.pulse');
     const badge = document.querySelector('.status-badge');
-    const isOnline = navigator.onLine;
+    
+    // Perform a real check if navigator thinks we are online
+    const isActuallyOnline = await checkConnectivity();
 
-    if (pulse) pulse.style.backgroundColor = isOnline ? 'var(--accent-green)' : 'var(--accent-red)';
+    if (pulse) pulse.style.backgroundColor = isActuallyOnline ? 'var(--accent-green)' : 'var(--accent-red)';
     if (badge) {
-        badge.innerHTML = isOnline 
+        badge.innerHTML = isActuallyOnline 
             ? '<span class="pulse" style="background-color: var(--accent-green)"></span> Online (Bridge Active)'
             : '<span class="pulse" style="background-color: var(--accent-red)"></span> Offline Mode Active';
     }
 
-    if (isOnline) flushQueue();
+    if (isActuallyOnline) flushQueue();
 };
 
 window.addEventListener('online', updateNetworkStatus);
@@ -253,6 +271,9 @@ window.addEventListener('offline', updateNetworkStatus);
 document.addEventListener('DOMContentLoaded', () => {
     // Initial status check
     updateNetworkStatus();
+    
+    // Re-verify after 1.5 seconds to catch any delayed browser/SW state updates
+    setTimeout(updateNetworkStatus, 1500);
     
     // Initial UI render
     renderQueue();
