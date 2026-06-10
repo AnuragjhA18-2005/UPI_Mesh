@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UPImesh | Offline Payments</title>
+    <link rel="stylesheet" href="styles.css">
+    <meta name="theme-color" content="#0a0a0c">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+
+    <!-- Top Status Bar -->
+    <header class="app-header">
+        <div class="brand">
+            <span class="logo">⚡</span>
+            <h1>UPImesh</h1>
+        </div>
+        <div class="status-badge">
+            <span class="pulse"></span>
+            Offline Mode Active
+        </div>
+    </header>
+
+    <main id="app-content">
+        <!-- View 1: My Digital Cash (Local Wallet) -->
+        <section id="view-wallet" class="view active">
+            <div class="card wallet-card">
+                <p class="label">Local Balance (Synced)</p>
+                <h2 class="balance">₹ 1,240.50</h2>
+                <div class="wallet-footer">
+                    <span>Last Synced: 2 mins ago</span>
+                </div>
+            </div>
+
+            <div class="quick-stats">
+                <div class="stat-item">
+                    <p class="label">Daily Limit</p>
+                    <p class="value">₹ 5,000</p>
+                </div>
+                <div class="stat-item">
+                    <p class="label">Mesh Strength</p>
+                    <p class="value" style="color: var(--accent-green);">Excellent</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- View 2: Pay Offline (Mesh Broadcast) -->
+        <section id="view-pay" class="view">
+            <div class="view-header">
+                <h2>New Payment</h2>
+                <p>Funds will be encrypted and shared via mesh.</p>
+            </div>
+
+            <form id="payment-form" class="payment-form">
+                <div class="input-group">
+                    <label for="vpa">Receiver VPA (UPI ID)</label>
+                    <input type="text" id="vpa" placeholder="merchant@upi" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="amount">Amount (₹)</label>
+                    <input type="number" id="amount" placeholder="0.00" step="0.01" required>
+                </div>
+
+                <button type="submit" class="btn-primary">
+                    <span class="icon">🔒</span>
+                    Encrypt & Queue Payment
+                </button>
+            </form>
+        </section>
+
+        <!-- View 3: Waiting to Send (Outbound Queue) -->
+        <section id="view-queue" class="view">
+            <div class="view-header">
+                <h2>Safe & Waiting</h2>
+                <p>Payments queued on this device.</p>
+            </div>
+
+            <div class="queue-list" id="queue-list">
+                <!-- Example Pending Item -->
+                <div class="queue-item">
+                    <div class="item-info">
+                        <p class="receiver">To: bob@upi</p>
+                        <p class="amount">₹ 250.00</p>
+                    </div>
+                    <div class="item-status">
+                        <span class="badge">Pending Sync</span>
+                        <p class="time">Just now</p>
+                    </div>
+                </div>
+                
+                <div class="empty-state" style="display: none;">
+                    <p>No pending payments. You're all caught up!</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" onclick="switchView('view-wallet', this)">
+            <span class="nav-icon">👛</span>
+            <span class="nav-label">Wallet</span>
+        </button>
+        <button class="nav-item" onclick="switchView('view-pay', this)">
+            <span class="nav-icon">💸</span>
+            <span class="nav-label">Pay</span>
+        </button>
+        <button class="nav-item" onclick="switchView('view-queue', this)">
+            <span class="nav-icon">⌛</span>
+            <span class="nav-label">Queue</span>
+        </button>
+    </nav>
+
+    <script src="app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registered', reg))
+                    .catch(err => console.error('Service Worker registration failed', err));
+            });
+        }
+    </script>
+</body>
+</html>

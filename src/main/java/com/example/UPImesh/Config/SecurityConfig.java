@@ -27,11 +27,14 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
-                        .requestMatchers(HttpMethod.POST, "/api/bridge/ingest").authenticated()
+                        // Publicly accessible static resources
+                        .requestMatchers("/", "/index.html", "/styles.css", "/app.js", "/sw.js", "/manifest.json").permitAll()
+                        // Public API endpoints
                         .requestMatchers(HttpMethod.GET, "/api/demo/generate-packet").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers("/error").permitAll()
+                        // Protected API endpoints
+                        .requestMatchers(HttpMethod.POST, "/api/bridge/ingest").authenticated()
                         .anyRequest().authenticated())
                 // Add JWT filter before the standard authentication filter
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
