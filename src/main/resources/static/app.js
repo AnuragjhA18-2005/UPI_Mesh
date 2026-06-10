@@ -7,6 +7,7 @@
 const CONFIG = {
     STORAGE_KEY: 'upimesh_outbound_queue',
     AUTH_KEY: 'upimesh_auth_token',
+    BALANCE_KEY: 'upimesh_last_balance',
     CLEANUP_DELAY: 5000,
     SYNC_RETRY_DELAY: 10000
 };
@@ -14,6 +15,24 @@ const CONFIG = {
 const STATE = {
     isSyncing: false
 };
+
+// --- UI Helpers ---
+/**
+ * Shows a premium in-app notification toast
+ * @param {string} message - Message to display
+ * @param {string} type - 'success' or 'error'
+ */
+function showNotification(message, type = 'success') {
+    const toast = document.getElementById('notification-toast');
+    if (!toast) return;
+
+    toast.innerText = message;
+    toast.className = `toast show ${type}`;
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 4000);
+}
 
 // --- View Navigation ---
 /**
@@ -190,7 +209,7 @@ async function flushQueue() {
             } else if (response.status === 400) {
                 // TERMINAL ERROR: Business logic failure (e.g., Insufficient Funds)
                 console.error(`[Bridge Sync] Terminal failure for ${packet.packetId}: 400 Bad Request`);
-                alert(`Payment Failed: The server rejected a payment for ₹${packet.amount}. (Likely Insufficient Balance). It has been removed from the queue.`);
+                showNotification(`Payment Failed: The server rejected a payment for ₹${packet.amount}. (Likely Insufficient Balance).`, 'error');
                 removeFromQueue(packet.packetId);
             } else if (response.status === 403 || response.status === 401) {
                 console.warn(`[Bridge Sync] Token rejected (403/401) for packet ${packet.packetId}. Clearing token.`);
@@ -245,19 +264,34 @@ async function generateOfflinePacket(receiver, amount) {
  * Fetches the actual balance from the server for the demo account
  */
 async function fetchBalance() {
-    if (!navigator.onLine) return;
+    const isOnline = await checkConnectivity();
+    if (!isOnline) return;
+    
     try {
         const res = await fetch('/api/accounts/alice_phone/balance');
         if (res.ok) {
             const data = await res.json();
             const balanceEl = document.querySelector('.balance');
             if (balanceEl) {
-                balanceEl.innerText = `₹ ${parseFloat(data.balance).toFixed(2)}`;
-                console.log(`[Wallet] Balance synced: ₹${data.balance}`);
+                const formattedBalance = parseFloat(data.balance).toFixed(2);
+                balanceEl.innerText = `₹ ${formattedBalance}`;
+                localStorage.setItem(CONFIG.BALANCE_KEY, formattedBalance);
+                console.log(`[Wallet] Balance synced: ₹${formattedBalance}`);
             }
         }
     } catch (e) {
         console.warn("[Wallet] Failed to sync balance.");
+    }
+}
+
+/** 
+ * Initializes the wallet UI with the last known balance from storage
+ */
+function initBalance() {
+    const lastBalance = localStorage.getItem(CONFIG.BALANCE_KEY) || '0.00';
+    const balanceEl = document.querySelector('.balance');
+    if (balanceEl) {
+        balanceEl.innerText = `₹ ${lastBalance}`;
     }
 }
 
@@ -268,7 +302,6 @@ async function fetchBalance() {
 async function checkConnectivity() {
     if (!navigator.onLine) return false;
     try {
-        // Use the dedicated health check endpoint
         const res = await fetch('/api/health?t=' + Date.now(), { method: 'GET', cache: 'no-store' });
         return res.ok;
     } catch (e) {
@@ -303,14 +336,15 @@ window.addEventListener('offline', updateNetworkStatus);
 setInterval(updateNetworkStatus, 5000);
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Initial UI state setup
+    initBalance();
+    renderQueue();
+
     // Initial status check
     updateNetworkStatus();
     
-    // Re-verify after 1.5 seconds to catch any delayed browser/SW state updates
+    // Re-verify after 1.5 seconds
     setTimeout(updateNetworkStatus, 1500);
-    
-    // Initial UI render
-    renderQueue();
 
     // Setup Payment Form Listener
     const form = document.getElementById('payment-form');
@@ -330,9 +364,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 addToQueue(packet);
                 e.target.reset();
                 switchView('view-queue');
+                showNotification(`Payment for ₹${amount} has been safely encrypted and queued.`, 'success');
             } catch (err) {
                 console.error("Payment generation failed:", err);
-                alert("Critical error during encryption. Payment aborted.");
+                showNotification("Critical error during encryption. Payment aborted.", "error");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<span class="icon">🔒</span> Encrypt & Queue Payment';

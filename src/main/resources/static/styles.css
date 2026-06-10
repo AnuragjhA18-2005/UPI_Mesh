@@ -317,8 +317,38 @@ body {
     font-weight: 500;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-    width: 0px;
-    background: transparent;
+/* Toast Notifications */
+.toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: rgba(22, 22, 26, 0.95);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    backdrop-filter: blur(10px);
+    width: 90%;
+    max-width: 400px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toast.show {
+    transform: translateX(-50%) translateY(0);
+}
+
+.toast.error {
+    border-left: 4px solid var(--accent-red);
+}
+
+.toast.success {
+    border-left: 4px solid var(--accent-green);
 }
